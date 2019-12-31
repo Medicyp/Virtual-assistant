@@ -1,0 +1,147 @@
+import speech_recognition as sr
+import os
+from gtts import gTTS
+import datetime
+import warnings
+import calendar
+import random
+import wikipedia
+
+#Ignore any warning messages
+warnings.filterwarnings('ignore')
+
+#Record audio and return it as a string
+def recordAudio():
+	r = sr.Recognizer()
+	with sr.Microphone() as source:
+		print('Say something!')
+		audio = r.listen(source)
+
+	# Speech recognition using Google Speech Recognition
+	data = ''
+	try:
+		data = r.recognize_google(audio)
+		print('You said: '+data)
+	except sr.UnknownValueErrors:
+		print('Google Speech Recognition could not understand the audio, unknown error')
+	except sr.RequestError as e:
+		print('Request results from Google Speech Recognition service error '+e)
+
+	return data
+
+# A Function to get the virtual assistant response
+def assistantResponse(text):
+	print(text)
+
+	#Convert the text to speech
+	myobj = gTTS(text= text, lang='en', slow=False)
+
+	#Save the converted audio to a file
+	myobj.save('assistant_response.mp3')
+
+	#Play the converted file
+	os.system('start assistant_response.mp3')
+
+# A function for wake word(s) or phrase
+def wakeWord(text):
+	WAKE_WORDS = ['hey computer' , 'okay computer'] # A list of wake words.
+
+	text = text.lower() # Converting the text to all lower case words
+
+	#Check to see if the users command/text contains a wake word/phrase
+	for phrase in WAKE_WORDS:
+		if phrase in text:
+			return True
+
+		#If the wake word isn't found in the text from the loop
+		return False
+
+# A function to get the current date
+def getDate():
+	now = datetime.datetime.now()
+	my_date = datetime.datetime.today()
+	weekday = calendar.day_name[my_date.weekday()] #e.g. Friday
+	monthNum = now.month
+	dayNum = now.day
+
+	# A list of months
+	month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+	# A list of ordinal numbers
+	ordinalNumbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21',
+					  '22', '23', '24', '25', '26', '27', '28', '29', '30', '31']
+
+	return 'Today is ' +weekday+' '+month_names[monthNum - 1]+' '+ordinalNumbers[dayNum - 1]
+
+# A function to return a random greeting response
+def greeting(text):
+
+	# Greeting inputs
+	GREETING_INPUTS = ['hi', 'hey', 'hello']
+
+	# Greeting responses
+	GREETING_RESPONSES = GREETING_INPUTS
+
+	# If the users input is a greeting, then return a randomly chosen greeting response.
+	for word in text.split():
+		if word.lower() in GREETING_INPUTS:
+			return random.choice(GREETING_RESPONSES) +'.'
+
+	#If no greeting was detected then return an empty string
+	return ''
+
+# A function to get a person first and last name from the text
+def getPerson(text):
+
+	wordList = text.split() #Splitting the text into a list of words
+
+	for i in range(0, len(wordList)):
+		if i + 3 <= len(wordList) - 1 and wordList[i].lower() == 'who' and wordList[i+1].lower() == 'is':
+			return wordList[i+2]+ ' '+wordList[i+3]
+
+while True:
+	# Record the audio
+	text = recordAudio()
+	response = ''
+
+	# Check for the wake word/phrase
+	if(wakeWord(text) == True):
+
+		# Check for greetings by the user
+		response = response + greeting(text)
+
+		# Check to see if the user said anything to do with the date
+		if('date' in text):
+			get_date = getDate()
+			response = response + ' '+get_date
+
+		# Check if the user said anything having to do with the time
+		if ('time' in text):
+			now = datetime.datetime.now()
+			meridiem = ''
+			if now.hour >=12:
+				meridiem = 'p.m'
+				hour = now.hour -12
+			else:
+				meridiem = 'a.m'
+				hour = now.hour
+
+			# Convert minute into a proper string
+			if now.minute <10:
+				minute = '0'+str(now.minute)
+			else:
+				minute = str(now.minute)
+
+			response = response +' ' +'It is '+str(hour)+ ':'+minute+ ' '+meridiem+'.'
+
+		# Check if the user said 'who is"
+		if ('who is' in text):
+			person = getPerson(text)
+			wiki = wikipedia.summary(person, sentences=2)
+			response = response +' '+wiki
+
+		#Have the assistant respond back using audio and text from response
+		assistantResponse(response)
+
+
+		print(response)
